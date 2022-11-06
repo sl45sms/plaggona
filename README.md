@@ -10,4 +10,13 @@ The start for something unique.
 
 The project aim to setup an infrastructure to hold plaggonas activities in metaverse worlds.
 
-look at this project soon, or not so soon.
+
+# aim to do
+keep track of the digital memories while your plaggona lives on metaverse worlds, learning from what plaggona says, what action do, the behavior and the acts, keep all that for you referense and later when the plaggona matures bring it alive!
+
+# how can you do that
+
+using advance monitoring while you use and act with your plaggona on any metaverse world.
+
+
+* look at this project soon, or not so soon...
