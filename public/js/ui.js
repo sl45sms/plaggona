@@ -21,8 +21,6 @@ class UIManager {
     init() {
         this.setupEventListeners();
         this.updateUsersList();
-        this.updateLayout();
-        window.addEventListener('resize', () => this.updateLayout());
     }
     
     setupEventListeners() {
@@ -438,35 +436,6 @@ class UIManager {
         // Use the chat system for notifications
         if (this.metaverse.chat) {
             this.metaverse.chat.showNotification(text, type, duration);
-        }
-    }
-    
-    // Utility methods for responsive design
-    updateLayout() {
-        const isMobile = window.innerWidth <= 1023;
-        const metaverse = document.getElementById('metaverse');
-        if (!metaverse) return;
-        
-        if (this.mobileNav) {
-            if (isMobile) {
-                this.mobileNav.classList.remove('hidden');
-                
-                // Make sure at least one panel has active class on mobile
-                const hasActivePanel = this.chatPanel?.classList.contains('active') ||
-                                     this.usersPanel?.classList.contains('active') ||
-                                     this.gesturesPanel?.classList.contains('active');
-                
-                if (!hasActivePanel && this.chatPanel) {
-                    this.chatPanel.classList.add('active');
-                    this.mobileTabChat?.classList.add('active');
-                }
-            } else {
-                this.mobileNav.classList.add('hidden');
-                // On desktop, remove active classes to let CSS grid handle layout
-                [this.chatPanel, this.usersPanel, this.gesturesPanel].forEach(panel => {
-                    if (panel) panel.classList.remove('active');
-                });
-            }
         }
     }
 }
