@@ -2,6 +2,24 @@
 
 A simple decentralized metaverse where all users (Plaggones) gather in the Agora to chat and interact with each other. Production-ready with Docker containerization and Kubernetes orchestration.
 
+look at this project soon, or not so soon...
+
+
+# Orama
+
+### what is that
+The start for something unique.
+
+plaggona, is the same metaphor for Greek as avatar in game/movies, not so as Hindu meaning, but you get the point.
+
+The project aim to setup an infrastructure to hold plaggonas activities in metaverse worlds.
+
+### aim to do
+keep track of the digital memories while your plaggona lives on metaverse world, learning from what plaggona says, what action do, the behavior and the acts, keep all that for you referense and later when the plaggona matures bring it alive!
+
+### how can you do that
+using advance monitoring while you use and act with your plaggona on metaverse world.
+
 ## Features
 
 - **3D Virtual World**: Immersive environment rendered with Three.js and WebGL
