@@ -21,11 +21,34 @@ class ChatSystem {
             this.sendMessage();
         });
         
-        // Enter to send, Shift+Enter for newline (textarea)
+        // Key handling while typing in chat:
+        // - Stop arrow keys and WASD from reaching global movement handlers (but keep caret typing/caret movement)
+        // - Enter to send, Shift+Enter for newline (textarea)
         this.messageInput.addEventListener('keydown', (e) => {
+            // Prevent world movement while typing by stopping propagation of movement keys
+            const key = e.key || '';
+            const code = e.code || '';
+            const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key);
+            const isWASD = ['w','a','s','d'].includes(key.toLowerCase()) || ['KeyW','KeyA','KeyS','KeyD'].includes(code);
+            if (isArrow || isWASD) {
+                e.stopPropagation();
+                return;
+            }
+            
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 this.sendMessage();
+            }
+        });
+
+        // Also stop propagation on keyup for the same keys to avoid any global keyup handlers
+        this.messageInput.addEventListener('keyup', (e) => {
+            const key = e.key || '';
+            const code = e.code || '';
+            const isArrow = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key);
+            const isWASD = ['w','a','s','d'].includes(key.toLowerCase()) || ['KeyW','KeyA','KeyS','KeyD'].includes(code);
+            if (isArrow || isWASD) {
+                e.stopPropagation();
             }
         });
         
@@ -34,16 +57,7 @@ class ChatSystem {
             this.autoResizeInput();
         });
         
-        // Focus management
-        this.messageInput.addEventListener('focus', () => {
-            // Disable movement controls when typing
-            document.addEventListener('keydown', this.preventMovementKeys);
-        });
-        
-        this.messageInput.addEventListener('blur', () => {
-            // Re-enable movement controls
-            document.removeEventListener('keydown', this.preventMovementKeys);
-        });
+        // No need for global key listeners; handled at the input target to avoid interfering with other controls
     }
 
     autoResizeInput() {
@@ -54,8 +68,10 @@ class ChatSystem {
         el.style.height = newH + 'px';
     }
     
+    // (Deprecated) Previously used to stop movement on document while input focused
+    // Keeping method for backward compatibility if referenced elsewhere
     preventMovementKeys(e) {
-        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key || e.code)) {
             e.stopPropagation();
         }
     }
