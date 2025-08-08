@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plaggona Metaverse - The Agora</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content">
+            <h2>🌍 Welcome to Plaggona Metaverse</h2>
+            <p>Enter the Agora and meet other Plaggonas!</p>
+            
+            <div class="login-form">
+                <input type="text" id="nicknameInput" placeholder="Enter your nickname" maxlength="20">
+                
+                <div class="appearance-selector">
+                    <h3>Choose your appearance:</h3>
+                    
+                    <div class="color-selector">
+                        <label>Cloth Color:</label>
+                        <div class="color-options">
+                            <div class="color-option" data-color="#FF6B6B" style="background: #FF6B6B"></div>
+                            <div class="color-option" data-color="#4ECDC4" style="background: #4ECDC4"></div>
+                            <div class="color-option" data-color="#45B7D1" style="background: #45B7D1"></div>
+                            <div class="color-option" data-color="#96CEB4" style="background: #96CEB4"></div>
+                            <div class="color-option" data-color="#FFEAA7" style="background: #FFEAA7"></div>
+                            <div class="color-option selected" data-color="#DDA0DD" style="background: #DDA0DD"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button id="enterAgoraBtn">Enter the Agora</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Metaverse Interface -->
+    <div id="metaverse" class="hidden">
+        <!-- Top HUD -->
+        <div id="topHUD">
+            <div class="hud-section">
+                <h1>🏛️ The Agora</h1>
+                <div id="userCount">0 Plaggonas online</div>
+            </div>
+            <div class="hud-section">
+                <button id="roomsBtn">Rooms</button>
+                <button id="settingsBtn">Settings</button>
+            </div>
+        </div>
+
+        <!-- 3D World Container -->
+        <div id="worldContainer">
+            <canvas id="worldCanvas"></canvas>
+        </div>
+
+        <!-- Chat Interface -->
+        <div id="chatInterface" class="active">
+            <div id="chatMessages"></div>
+            <div id="chatInput">
+                <textarea id="messageInput" rows="1" placeholder="Say something to other Plaggonas..." maxlength="200" aria-label="Chat message input"></textarea>
+                <button id="sendBtn" aria-label="Send message">Send</button>
+            </div>
+        </div>
+
+        <!-- Users List -->
+        <div id="usersList">
+            <h3>Plaggonas nearby:</h3>
+            <div id="usersContainer"></div>
+        </div>
+
+        <!-- Gesture Controls -->
+        <div id="gestureControls">
+            <h4>Gestures:</h4>
+            <button class="gesture-btn" data-gesture="wave">👋 Wave</button>
+            <button class="gesture-btn" data-gesture="dance">💃 Dance</button>
+            <button class="gesture-btn" data-gesture="cheer">🎉 Cheer</button>
+            <button class="gesture-btn" data-gesture="think">🤔 Think</button>
+        </div>
+    </div>
+
+    <!-- Mobile Bottom Tabs (visible on small screens) -->
+    <nav id="mobileNav" role="tablist" aria-label="Mobile panels">
+        <button id="mobileTabChat" class="mobile-tab active" role="tab" aria-selected="true" aria-controls="chatInterface">🗨️ Chat</button>
+        <button id="mobileTabUsers" class="mobile-tab" role="tab" aria-selected="false" aria-controls="usersList">👥 Users</button>
+        <button id="mobileTabGestures" class="mobile-tab" role="tab" aria-selected="false" aria-controls="gestureControls">✋ Gestures</button>
+    </nav>
+    </div>
+
+    <!-- Rooms Modal -->
+    <div id="roomsModal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Private Rooms</h2>
+            <div class="rooms-section">
+                <h3>Available Rooms:</h3>
+                <div id="roomsList"></div>
+            </div>
+            <div class="rooms-section">
+                <h3>Create New Room:</h3>
+                <input type="text" id="roomNameInput" placeholder="Room name" maxlength="30">
+                <input type="number" id="maxUsersInput" placeholder="Max users (2-20)" min="2" max="20" value="10">
+                <label>
+                    <input type="checkbox" id="privateRoomCheckbox"> Private Room
+                </label>
+                <button id="createRoomBtn">Create Room</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loadingScreen">
+        <div class="loading-content">
+            <img src="assets/plaggona.jpeg" alt="Plaggona" class="loading-avatar">
+            <div class="loading-text">Loading the Agora...</div>
+            <div class="loading-spinner"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="js/metaverse.js"></script>
+    <script src="js/world3d.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/ui.js"></script>
+</body>
+</html>

@@ -1,0 +1,136 @@
+# Default values for plaggona-k8s.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  repository: localhost:32000/plaggona-metaverse
+  tag: latest
+  pullPolicy: Always
+
+imagePullSecrets: []
+nameOverride: "plaggona-metaverse"
+fullnameOverride: "plaggona-metaverse"
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "3000"
+  prometheus.io/path: "/metrics"
+
+podSecurityContext:
+  fsGroup: 1001
+  runAsNonRoot: true
+  runAsUser: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false
+  runAsNonRoot: true
+  runAsUser: 1001
+
+service:
+  type: ClusterIP
+  port: 3000
+  targetPort: 3000
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
+
+ingress:
+  enabled: true
+  className: ""
+  annotations:
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.tls.certresolver: leresolver
+    traefik.ingress.kubernetes.io/router.tls.domains.0.main: plaggona.com
+    traefik.ingress.kubernetes.io/router.tls.domains.0.sans: www.plaggona.com
+  hosts:
+    - host: plaggona.com
+      paths: 
+        - path: "/"
+          pathType: Prefix
+    - host: www.plaggona.com
+      paths: 
+        - path: "/"
+          pathType: Prefix
+  tls:
+    - secretName: plaggona-tls
+      hosts:
+        - plaggona.com
+        - www.plaggona.com
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    memory: 256Mi
+    cpu: 200m
+
+# Environment variables for the metaverse server
+env:
+  NODE_ENV: "production"
+  PORT: "3000"
+  LOG_LEVEL: "info"
+  MAX_USERS: "1000"
+  ROOM_TIMEOUT: "3600000"
+
+# Liveness and readiness probes
+livenessProbe:
+  httpGet:
+    path: /api/health
+    port: 3000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /api/health
+    port: 3000
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Pod disruption budget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - plaggona-k8s
+          topologyKey: kubernetes.io/hostname
