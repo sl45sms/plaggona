@@ -221,19 +221,15 @@ class World3D {
         
         document.addEventListener('keyup', (e) => {
             switch(e.code) {
-                case 'KeyW':
                 case 'ArrowUp':
                     this.movement.forward = false;
                     break;
-                case 'KeyS':
                 case 'ArrowDown':
                     this.movement.backward = false;
                     break;
-                case 'KeyA':
                 case 'ArrowLeft':
                     this.movement.left = false;
                     break;
-                case 'KeyD':
                 case 'ArrowRight':
                     this.movement.right = false;
                     break;
