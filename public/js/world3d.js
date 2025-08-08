@@ -200,19 +200,15 @@ class World3D {
         // Keyboard controls for movement
         document.addEventListener('keydown', (e) => {
             switch(e.code) {
-                case 'KeyW':
                 case 'ArrowUp':
                     this.movement.forward = true;
                     break;
-                case 'KeyS':
                 case 'ArrowDown':
                     this.movement.backward = true;
                     break;
-                case 'KeyA':
                 case 'ArrowLeft':
                     this.movement.left = true;
                     break;
-                case 'KeyD':
                 case 'ArrowRight':
                     this.movement.right = true;
                     break;

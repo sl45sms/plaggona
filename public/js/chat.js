@@ -55,7 +55,7 @@ class ChatSystem {
     }
     
     preventMovementKeys(e) {
-        if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
             e.stopPropagation();
         }
     }
