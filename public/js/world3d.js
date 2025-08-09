@@ -131,13 +131,18 @@ class World3D {
         
         // Benches
         for (let i = 0; i < 6; i++) {
-            const angle = (i / 6) * Math.PI * 2;
-            const x = Math.cos(angle) * 12;
-            const z = Math.sin(angle) * 12;
-            
+            // Place benches evenly spaced in a circle of radius 12
+            const placementAngle = (i / 6) * Math.PI * 2;
+            const x = Math.cos(placementAngle) * 12;
+            const z = Math.sin(placementAngle) * 12;
+
             const bench = this.createBench();
             bench.position.set(x, 0.5, z);
-            bench.rotation.y = angle + Math.PI;
+
+            // Default bench front faces +Z in local space. We want it to face the center (0,0,0).
+            // Compute angle so that local +Z aligns with vector pointing to center (-x, -z).
+            const angleToCenter = Math.atan2(-x, -z);
+            bench.rotation.y = angleToCenter;
             this.scene.add(bench);
         }
     }
