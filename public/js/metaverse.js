@@ -68,6 +68,30 @@ class MetaverseClient {
             
             // Join the Agora if we have a user
             if (this.currentUser) {
+                // Attach socket id as user id
+                const previousId = this.currentUser.id;
+                this.currentUser.id = this.socket.id;
+                // Normalize appearance object for world3D expectations
+                if (!this.currentUser.appearance) {
+                    this.currentUser.appearance = { clothColor: this.currentUser.clothColor };
+                }
+                // If we had a provisional local avatar, update its id mapping
+                if (this.world3D && previousId && previousId !== this.currentUser.id) {
+                    if (this.world3D.userMeshes.has(previousId)) {
+                        const mesh = this.world3D.userMeshes.get(previousId);
+                        this.world3D.userMeshes.delete(previousId);
+                        this.world3D.userMeshes.set(this.currentUser.id, mesh);
+                    }
+                    this.world3D.localUserId = this.currentUser.id;
+                } else if (this.world3D && !previousId) {
+                    // First time set
+                    this.world3D.setLocalUser({
+                        id: this.currentUser.id,
+                        nickname: this.currentUser.nickname,
+                        appearance: this.currentUser.appearance,
+                        position: { x: 0, y: 0, z: 0 }
+                    });
+                }
                 this.socket.emit('join-agora', this.currentUser);
                 this.ui.showNotification('Welcome to the Plaggona Agora!', 'success');
             }
@@ -183,7 +207,7 @@ class MetaverseClient {
             this.ui.showNotification('Connecting to the Plaggona Agora...', 'info');
             this.socket.connect();
             
-            // Initialize 3D world
+            // Initialize 3D world (local avatar created after socket connect assigns id)
             this.world3D.initialize();
         };
         

@@ -8,6 +8,9 @@ class World3D {
         this.canvas = null;
         this.userMeshes = new Map();
     this.baseAvatar = null; // Loaded Plaggona OBJ root
+    // Local (self) avatar tracking
+    this.localUserId = null;
+    this.localUserMesh = null;
         this.cameraControls = {
             mouseX: 0,
             mouseY: 0,
@@ -130,11 +133,18 @@ class World3D {
                 this.userMeshes.forEach((g, userId) => {
                     if (g.userData && g.userData.isPrimitive) {
                         this.scene.remove(g);
-                        const user = this.metaverse.getUsers().get(userId);
+                        this.userMeshes.delete(userId);
+                        let user = this.metaverse.getUsers().get(userId);
+                        if (!user && userId === this.localUserId) {
+                            user = this._localUserSnapshot; // fallback to snapshot for local user
+                        }
                         if (user) {
                             const newMesh = this.createUserMesh(user, true);
                             this.userMeshes.set(userId, newMesh);
                             this.scene.add(newMesh);
+                            if (this.localUserId === userId) {
+                                this.localUserMesh = newMesh;
+                            }
                         }
                     }
                 });
@@ -142,6 +152,36 @@ class World3D {
             .catch(err => {
                 console.warn('Failed to fetch/parse plaggona.obj, keeping primitive avatars', err);
             });
+    }
+
+    /**
+     * Register (or re-register) the local player so they are visible.
+     * Call this after you know the current user's data (nickname, appearance, etc).
+     * @param {Object} user - user object with id, position, nickname, appearance
+     */
+    setLocalUser(user) {
+        if (!user || !user.id) return;
+        this.localUserId = user.id;
+        // Store snapshot in case metaverse.getUsers() not yet populated when upgrading
+        this._localUserSnapshot = user;
+        // Use existing mesh if present
+        let mesh = this.userMeshes.get(user.id);
+        if (!mesh) {
+            mesh = this.createUserMesh(user);
+            this.userMeshes.set(user.id, mesh);
+            this.scene && this.scene.add(mesh);
+        }
+        this.localUserMesh = mesh;
+        // Sync internal playerPosition with starting position
+        if (user.position) {
+            this.playerPosition.x = user.position.x;
+            this.playerPosition.y = user.position.y;
+            this.playerPosition.z = user.position.z;
+        }
+        // Ensure camera follows immediately
+        this.camera.position.x = this.playerPosition.x;
+        this.camera.position.z = this.playerPosition.z + 10;
+        this.camera.lookAt(this.playerPosition.x, 0, this.playerPosition.z);
     }
     
     setupScene() {
@@ -354,15 +394,23 @@ class World3D {
     createUserMesh(user, skipPrimitiveFallback = false) {
         const userGroup = new THREE.Group();
         let avatarRoot;
+        const clothColor = (user.appearance && user.appearance.clothColor) || user.clothColor || '#DDA0DD';
         if (this.baseAvatar) {
             avatarRoot = this.baseAvatar.clone(true);
             // Apply player-specific color to all mesh materials (multiply or set base color)
             avatarRoot.traverse(child => {
                 if (child.isMesh && child.material) {
+                    // Ensure each avatar has independent material instances
                     if (Array.isArray(child.material)) {
-                        child.material.forEach(m => { if (m.color) m.color.set(user.appearance.clothColor); });
-                    } else if (child.material.color) {
-                        child.material.color.set(user.appearance.clothColor);
+                        child.material = child.material.map(m => {
+                            const cloned = m.clone();
+                            if (cloned.color) cloned.color.set(clothColor);
+                            return cloned;
+                        });
+                    } else {
+                        const mat = child.material.clone();
+                        if (mat.color) mat.color.set(clothColor);
+                        child.material = mat;
                     }
                 }
             });
@@ -371,7 +419,7 @@ class World3D {
             // Primitive fallback (original simple geometry) while model not loaded
             userGroup.userData.isPrimitive = true;
             const bodyGeometry = new THREE.CylinderGeometry(0.5, 0.3, 1.5, 8);
-            const bodyMaterial = new THREE.MeshLambertMaterial({ color: user.appearance.clothColor });
+            const bodyMaterial = new THREE.MeshLambertMaterial({ color: clothColor });
             const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
             body.position.y = 0.75;
             body.castShadow = true;
@@ -518,6 +566,11 @@ class World3D {
             this.camera.position.x = this.playerPosition.x;
             this.camera.position.z = this.playerPosition.z + 10;
             this.camera.lookAt(this.playerPosition.x, 0, this.playerPosition.z);
+
+            // Move local avatar mesh if present
+            if (this.localUserMesh) {
+                this.localUserMesh.position.set(this.playerPosition.x, this.playerPosition.y, this.playerPosition.z);
+            }
             
             // Send position update to server
             this.metaverse.updatePosition(this.playerPosition);
