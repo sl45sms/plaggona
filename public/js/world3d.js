@@ -471,7 +471,16 @@ class World3D {
     updateUserPosition(userId, position) {
         const userMesh = this.userMeshes.get(userId);
         if (userMesh) {
+            // Compute direction vector from last position to new position to orient avatar
+            const last = userMesh.userData.lastPos || { x: userMesh.position.x, y: userMesh.position.y, z: userMesh.position.z };
             userMesh.position.set(position.x, position.y, position.z);
+            const dx = position.x - last.x;
+            const dz = position.z - last.z;
+            if (Math.abs(dx) > 0.0001 || Math.abs(dz) > 0.0001) {
+                // Yaw so that local +Z points along movement vector (dx, dz)
+                userMesh.rotation.y = Math.atan2(dx, dz);
+            }
+            userMesh.userData.lastPos = { x: position.x, y: position.y, z: position.z };
         }
     }
     
@@ -539,6 +548,8 @@ class World3D {
     updateMovement() {
         let moved = false;
         const speed = 0.2;
+    const prevX = this.playerPosition.x;
+    const prevZ = this.playerPosition.z;
         
         if (this.movement.forward) {
             this.playerPosition.z -= speed;
@@ -570,6 +581,12 @@ class World3D {
             // Move local avatar mesh if present
             if (this.localUserMesh) {
                 this.localUserMesh.position.set(this.playerPosition.x, this.playerPosition.y, this.playerPosition.z);
+                // Determine movement direction and rotate avatar to face it
+                const dx = this.playerPosition.x - prevX;
+                const dz = this.playerPosition.z - prevZ;
+                if (Math.abs(dx) > 0.0001 || Math.abs(dz) > 0.0001) {
+                    this.localUserMesh.rotation.y = Math.atan2(dx, dz);
+                }
             }
             
             // Send position update to server
