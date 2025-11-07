@@ -265,12 +265,9 @@ class World3D {
             const angle = (i / 8) * Math.PI * 2;
             const x = Math.cos(angle) * 20;
             const z = Math.sin(angle) * 20;
-            
-            const columnGeometry = new THREE.CylinderGeometry(0.8, 1, 8, 8);
-            const columnMaterial = new THREE.MeshLambertMaterial({ color: 0xDDDDDD });
-            const column = new THREE.Mesh(columnGeometry, columnMaterial);
-            column.position.set(x, 4, z);
-            column.castShadow = true;
+
+            const column = this.createDoricColumn();
+            column.position.set(x, 0, z);
             this.scene.add(column);
         }
         
@@ -290,6 +287,53 @@ class World3D {
             bench.rotation.y = angleToCenter;
             this.scene.add(bench);
         }
+    }
+
+    createDoricColumn() {
+        const columnGroup = new THREE.Group();
+        const columnMaterial = new THREE.MeshLambertMaterial({ color: 0xDDDDDD });
+        const columnHeight = 8;
+        const shaftHeight = columnHeight * 0.9;
+        const baseRadius = 0.8;
+        const topRadius = 0.65;
+
+        // Shaft and Echinus
+        const points = [];
+        // Start at the base
+        points.push(new THREE.Vector2(baseRadius, 0));
+
+        // Shaft with entasis
+        const shaftSegments = 10;
+        for (let i = 1; i <= shaftSegments; i++) {
+            const t = i / shaftSegments;
+            const y = t * shaftHeight;
+            const entasis = Math.sin(t * Math.PI) * 0.05; // Subtle bulge
+            const radius = baseRadius * (1 - t) + topRadius * t + entasis;
+            points.push(new THREE.Vector2(radius, y));
+        }
+
+        // Echinus (the curved capital part)
+        const echinusRadius = baseRadius * 1.1;
+        points.push(new THREE.Vector2(echinusRadius, shaftHeight + 0.3));
+        points.push(new THREE.Vector2(echinusRadius, shaftHeight + 0.5));
+
+        const latheGeometry = new THREE.LatheGeometry(points, 20); // 20 segments for fluting effect
+        const shaft = new THREE.Mesh(latheGeometry, columnMaterial);
+        shaft.castShadow = true;
+        shaft.receiveShadow = true;
+        columnGroup.add(shaft);
+
+        // Abacus (the square slab on top)
+        const abacusSize = echinusRadius * 1.4;
+        const abacusHeight = 0.4;
+        const abacusGeometry = new THREE.BoxGeometry(abacusSize, abacusHeight, abacusSize);
+        const abacus = new THREE.Mesh(abacusGeometry, columnMaterial);
+        abacus.position.y = shaftHeight + 0.5 + (abacusHeight / 2); // Center it on top
+        abacus.castShadow = true;
+        abacus.receiveShadow = true;
+        columnGroup.add(abacus);
+
+        return columnGroup;
     }
     
     createBench() {
