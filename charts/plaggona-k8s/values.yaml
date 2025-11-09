@@ -86,6 +86,9 @@ env:
   LOG_LEVEL: "info"
   MAX_USERS: "1000"
   ROOM_TIMEOUT: "3600000"
+  # Provide Redis connection string for multi-replica synchronization (e.g. redis://redis-master:6379)
+  # Set via helm --set env.REDIS_URL=redis://your-redis:6379
+  REDIS_URL: ""
 
 # Liveness and readiness probes
 livenessProbe:
@@ -107,7 +110,7 @@ readinessProbe:
   failureThreshold: 3
 
 autoscaling:
-  enabled: true
+  enabled: false # Disabled to allow manual single replica for stateful Socket.IO until Redis adapter is confirmed
   minReplicas: 2
   maxReplicas: 10
   targetCPUUtilizationPercentage: 70
