@@ -10,8 +10,40 @@ NAMESPACE="default"
 RELEASE_NAME="plaggona-metaverse"
 CHART_PATH="./charts/plaggona-k8s"
 IMAGE_TAG="latest"
+REDIS_CHART_PATH="./charts/plagona-redis"
+REDIS_RELEASE_NAME="plagona-redis"
+
+DEFAULT_REPLICAS_SINGLE=1
+DEFAULT_REPLICAS_MULTI=2
+
+use_redis=false
+multi_replica=false
+redis_password=""
 
 echo "🌍 Deploying Plaggona Metaverse..."
+echo "" 
+echo "Choose deployment mode:" 
+echo "  1) Single replica (no Redis, simpler, users isolated if you later scale manually)" 
+echo "  2) Multi-replica ready (installs Redis adapter backend)" 
+read -p "Select [1/2]: " mode_choice
+if [[ "$mode_choice" == "2" ]]; then
+    use_redis=true
+    multi_replica=true
+fi
+
+if $use_redis; then
+    echo "" 
+    if [ ! -d "$REDIS_CHART_PATH" ]; then
+        echo "❌ Redis chart path '$REDIS_CHART_PATH' not found. Abort or create the chart."
+        exit 1
+    fi
+    read -p "🔐 Use Redis AUTH password? (enter to skip): " redis_password
+    if [[ -n "$redis_password" ]]; then
+        echo "Password set (will create secret)."
+    else
+        echo "No password; deploying Redis without AUTH." 
+    fi
+fi
 
 # Function to ask user confirmation
 ask_user() {
@@ -67,16 +99,49 @@ microk8s.helm3 package -d ./plaggona-k8s ./plaggona-k8s
 cd ..
 
 # Check if release already exists
-if microk8s.helm3 list -n ${NAMESPACE} | grep -q ${RELEASE_NAME}; then
-    echo "⬆️ Upgrading existing release..."
-    microk8s.helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} ./charts/plaggona-k8s/plaggona-k8s-0.1.0.tgz \
-        --set image.tag=${IMAGE_TAG} \
-        --wait --timeout=300s
+EXTRA_ARGS=""
+if $use_redis; then
+    # Install or upgrade Redis first
+    echo "🗄️  Deploying Redis backend ($REDIS_RELEASE_NAME)..."
+    if microk8s.helm3 list -n ${NAMESPACE} | grep -q ${REDIS_RELEASE_NAME}; then
+        if [[ -n "$redis_password" ]]; then
+            microk8s.helm3 upgrade ${REDIS_RELEASE_NAME} -n ${NAMESPACE} ${REDIS_CHART_PATH} \
+                --set fullnameOverride=${REDIS_RELEASE_NAME} \
+                --set auth.enabled=true --set-string auth.password="${redis_password}" --wait --timeout=180s
+        else
+            microk8s.helm3 upgrade ${REDIS_RELEASE_NAME} -n ${NAMESPACE} ${REDIS_CHART_PATH} \
+                --set fullnameOverride=${REDIS_RELEASE_NAME} --wait --timeout=180s
+        fi
+    else
+        if [[ -n "$redis_password" ]]; then
+            microk8s.helm3 install ${REDIS_RELEASE_NAME} -n ${NAMESPACE} ${REDIS_CHART_PATH} \
+                --set fullnameOverride=${REDIS_RELEASE_NAME} \
+                --set auth.enabled=true --set-string auth.password="${redis_password}" --wait --timeout=180s
+        else
+            microk8s.helm3 install ${REDIS_RELEASE_NAME} -n ${NAMESPACE} ${REDIS_CHART_PATH} \
+                --set fullnameOverride=${REDIS_RELEASE_NAME} --wait --timeout=180s
+        fi
+    fi
+    if [[ -n "$redis_password" ]]; then
+        EXTRA_ARGS+=" --set env.REDIS_URL=redis://:${redis_password}@${REDIS_RELEASE_NAME}:6379 "
+    else
+        EXTRA_ARGS+=" --set env.REDIS_URL=redis://${REDIS_RELEASE_NAME}:6379 "
+    fi
+    EXTRA_ARGS+=" --set autoscaling.enabled=true "
 else
-    echo "🚀 Installing new release..."
-    microk8s.helm3 install ${RELEASE_NAME} -n ${NAMESPACE} ./charts/plaggona-k8s/plaggona-k8s-0.1.0.tgz \
-        --set image.tag=${IMAGE_TAG} \
-        --wait --timeout=300s
+    EXTRA_ARGS+=" --set autoscaling.enabled=false --set replicaCount=${DEFAULT_REPLICAS_SINGLE} "
+fi
+
+if microk8s.helm3 list -n ${NAMESPACE} | grep -q ${RELEASE_NAME}; then
+        echo "⬆️ Upgrading existing release..."
+        microk8s.helm3 upgrade ${RELEASE_NAME} -n ${NAMESPACE} ./charts/plaggona-k8s/plaggona-k8s-0.1.0.tgz \
+                --set image.tag=${IMAGE_TAG} ${EXTRA_ARGS} \
+                --wait --timeout=300s
+else
+        echo "🚀 Installing new release..."
+        microk8s.helm3 install ${RELEASE_NAME} -n ${NAMESPACE} ./charts/plaggona-k8s/plaggona-k8s-0.1.0.tgz \
+                --set image.tag=${IMAGE_TAG} ${EXTRA_ARGS} \
+                --wait --timeout=300s
 fi
 
 # Wait for deployment to be ready
@@ -85,6 +150,11 @@ microk8s.kubectl wait --for=condition=available --timeout=300s deployment/${RELE
 
 # Show deployment status
 echo "✅ Deployment completed successfully!"
+if $use_redis; then
+    echo "🔌 Redis adapter enabled via REDIS_URL (check server logs for activation)."
+else
+    echo "ℹ️  Running single-replica mode without Redis (scale cautiously to avoid isolated worlds)."
+fi
 echo ""
 echo "📊 Deployment Status:"
 echo "Pods:"
@@ -107,5 +177,9 @@ echo "   - https://www.plaggona.com"
 echo ""
 echo "🔧 Useful commands:"
 echo "   View logs: microk8s.kubectl logs -f deployment/${RELEASE_NAME} -n ${NAMESPACE}"
-echo "   Scale up:  microk8s.kubectl scale deployment/${RELEASE_NAME} --replicas=3 -n ${NAMESPACE}"
+if $use_redis; then
+    echo "   Scale up:  microk8s.kubectl scale deployment/${RELEASE_NAME} --replicas=3 -n ${NAMESPACE}"
+else
+    echo "   (To enable safe scaling later: redeploy with Redis using ./deploy.sh and choose option 2)"
+fi
 echo "   Uninstall: microk8s.helm3 uninstall ${RELEASE_NAME} -n ${NAMESPACE}"

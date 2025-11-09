@@ -94,6 +94,12 @@ class MetaverseClient {
                 }
                 this.socket.emit('join-agora', this.currentUser);
                 this.ui.showNotification('Welcome to the Plaggona Agora!', 'success');
+
+                // Defensive sync: fetch current users shortly after join in case the
+                // initial `current-users` broadcast is delayed or dropped.
+                setTimeout(() => {
+                    this.syncUsersFromHttp();
+                }, 700);
             }
         });
         
@@ -111,11 +117,25 @@ class MetaverseClient {
         });
         
         this.socket.on('current-users', (users) => {
-            users.forEach(user => {
-                this.users.set(user.id, user);
-                this.world3D.addUser(user);
-            });
-            this.ui.updateUsersList();
+            try {
+                (users || []).forEach(user => {
+                    // Normalize fields expected by UI/World
+                    user.appearance = user.appearance || { clothColor: user.clothColor || '#DDA0DD' };
+                    user.position = user.position || { x: 0, y: 0, z: 0 };
+                    if (!this.users.has(user.id)) {
+                        this.users.set(user.id, user);
+                        this.world3D.addUser(user);
+                    } else {
+                        // Update if already present
+                        const u = this.users.get(user.id);
+                        u.appearance = user.appearance;
+                        u.nickname = user.nickname;
+                        u.position = user.position;
+                    }
+                });
+            } finally {
+                this.ui.updateUsersList();
+            }
         });
         
         this.socket.on('user-joined', (user) => {
@@ -154,6 +174,27 @@ class MetaverseClient {
                 this.chat.addSystemMessage(`${user.nickname} ${this.getGestureText(data.gesture)}`);
             }
         });
+    }
+
+    // Optional extra sync via HTTP for added robustness across reconnects and adapters
+    async syncUsersFromHttp() {
+        try {
+            const res = await fetch('/api/users', { cache: 'no-store' });
+            if (!res.ok) return;
+            const list = await res.json();
+            (list || []).forEach(user => {
+                if (!user || user.id === (this.socket && this.socket.id)) return;
+                user.appearance = user.appearance || { clothColor: user.clothColor || '#DDA0DD' };
+                user.position = user.position || { x: 0, y: 0, z: 0 };
+                if (!this.users.has(user.id)) {
+                    this.users.set(user.id, user);
+                    this.world3D.addUser(user);
+                }
+            });
+            this.ui.updateUsersList();
+        } catch (e) {
+            console.debug('syncUsersFromHttp failed', e);
+        }
     }
     
     enterAgora() {

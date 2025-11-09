@@ -4,6 +4,14 @@ const socketIo = require('socket.io');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+// Optional: Redis adapter for multi-replica broadcasting
+let createAdapter, createClient;
+try {
+    ({ createAdapter } = require('@socket.io/redis-adapter'));
+    ({ createClient } = require('redis'));
+} catch (e) {
+    // Dependencies may not be installed yet; adapter remains disabled
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -19,6 +27,7 @@ const io = socketIo(server, {
 });
 
 const PORT = process.env.PORT || 3000;
+const REDIS_URL = process.env.REDIS_URL || process.env.REDIS_CONN || '';
 
 // Middleware
 app.use(cors());
@@ -241,7 +250,30 @@ function getRandomColor() {
     return colors[Math.floor(Math.random() * colors.length)];
 }
 
-server.listen(PORT, () => {
-    console.log(`🌍 Plaggona Metaverse Server running on port ${PORT}`);
-    console.log(`📍 Access the Agora at http://localhost:${PORT}`);
+async function setupAdapterIfAvailable() {
+    if (!REDIS_URL) {
+        console.log('ℹ️  REDIS_URL not set. Running without Socket.IO Redis adapter.');
+        return;
+    }
+    if (!createAdapter || !createClient) {
+        console.warn('⚠️  Redis adapter packages not installed. Skipping adapter setup.');
+        return;
+    }
+    try {
+        const pubClient = createClient({ url: REDIS_URL });
+        const subClient = pubClient.duplicate();
+        await Promise.all([pubClient.connect(), subClient.connect()]);
+        io.adapter(createAdapter(pubClient, subClient));
+        console.log('🔌 Socket.IO Redis adapter enabled');
+    } catch (err) {
+        console.error('❌ Failed to connect Redis adapter:', err.message);
+    }
+}
+
+// Start server after attempting adapter setup (non-blocking on failure)
+setupAdapterIfAvailable().finally(() => {
+    server.listen(PORT, () => {
+        console.log(`🌍 Plaggona Metaverse Server running on port ${PORT}`);
+        console.log(`📍 Access the Agora at http://localhost:${PORT}`);
+    });
 });

@@ -90,6 +90,47 @@ This automated script handles:
 - Health check verification
 - Auto-scaling configuration
 
+### Multi-Replica Realtime (Socket.IO) Notes
+
+When you run more than one replica, each pod maintains its own in-memory user/room state. Without a pub/sub adapter, users connected to different pods won’t see each other. To enable a shared Agora across pods:
+
+1. Deploy Redis accessible from the app pods. This repo includes a simple Redis chart:
+      ```bash
+      # Install Redis with a stable service name 'plagona-redis'
+      helm upgrade --install plagona-redis ./charts/plagona-redis \
+         --set fullnameOverride=plagona-redis
+      ```
+      - With password and persistence:
+         ```bash
+         helm upgrade --install plagona-redis ./charts/plagona-redis \
+            --set fullnameOverride=plagona-redis \
+            --set auth.enabled=true --set auth.password='<strong-password>' \
+            --set persistence.enabled=true --set persistence.size=1Gi
+         ```
+2. Set `REDIS_URL` in the app chart:
+      - Without auth:
+         ```bash
+         helm upgrade --install plaggona ./charts/plaggona-k8s \
+            --set env.REDIS_URL=redis://plagona-redis:6379 \
+            --set autoscaling.enabled=true
+         ```
+      - With auth:
+         ```bash
+         helm upgrade --install plaggona ./charts/plaggona-k8s \
+            --set env.REDIS_URL="redis://:<strong-password>@plagona-redis:6379" \
+            --set autoscaling.enabled=true
+         ```
+3. The server will auto-enable the Socket.IO Redis adapter when `REDIS_URL` is set (see logs below).
+
+For debugging or single-node mode, disable autoscaling in `charts/plaggona-k8s/values.yaml` (`autoscaling.enabled: false`) and keep `replicaCount: 1`.
+
+Server logs will indicate adapter status:
+- `🔌 Socket.IO Redis adapter enabled` – using Redis across pods
+- `ℹ️  REDIS_URL not set...` – single-pod mode
+- `⚠️  Redis adapter packages not installed` – dependencies missing
+
+Tip: To avoid committing secrets in values, you can template `env.REDIS_URL` from a Secret and reference it as an env var in the Deployment; the app will read `process.env.REDIS_URL` at startup.
+
 ## 🎮 How to Play
 
 1. **Enter your nickname** when prompted
