@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "plagona-redis.fullname" . }}
+  labels:
+    {{- include "plagona-redis.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: redis
+      port: {{ .Values.service.port }}
+      targetPort: 6379
+      protocol: TCP
+  selector:
+    {{- include "plagona-redis.selectorLabels" . | nindent 4 }}

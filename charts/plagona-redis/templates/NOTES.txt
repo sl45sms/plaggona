@@ -1,0 +1,15 @@
+Redis has been installed.
+
+Connection from within the cluster:
+
+  Service: {{ include "plagona-redis.fullname" . }}
+  Port:    {{ .Values.service.port }}
+
+Sample Socket.IO env for your app values:
+
+  env:
+    REDIS_URL: redis://{{ include "plagona-redis.fullname" . }}:{{ .Values.service.port }}
+
+If authentication was enabled, append the password:
+
+  redis://:$(kubectl get secret {{ include "plagona-redis.fullname" . }} -o jsonpath='{.data.redis-password}' | base64 -d)@{{ include "plagona-redis.fullname" . }}:{{ .Values.service.port }}

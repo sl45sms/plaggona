@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "plagona-redis.fullname" . }}
+  labels:
+    app.kubernetes.io/name: {{ include "plagona-redis.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "plagona-redis.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "plagona-redis.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: redis
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 6379
+              name: redis
+          {{- if .Values.auth.enabled }}
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ if .Values.auth.existingSecret }}{{ .Values.auth.existingSecret }}{{ else }}{{ include "plagona-redis.fullname" . }}{{ end }}
+                  key: redis-password
+          command: ["sh", "-c"]
+          args:
+            - |
+              if [ -n "$REDIS_PASSWORD" ]; then
+                exec redis-server --requirepass "$REDIS_PASSWORD" --appendonly yes;
+              else
+                exec redis-server --appendonly yes;
+              fi
+          {{- else }}
+          command: ["redis-server", "--appendonly", "yes"]
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "plagona-redis.fullname" . }}
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

@@ -1,0 +1,15 @@
+apiVersion: v2
+name: plagona-redis
+description: A lightweight Redis chart to back Socket.IO pub/sub for the Plaggona Metaverse
+type: application
+version: 0.1.0
+appVersion: "7.2"
+home: https://redis.io
+keywords:
+  - redis
+  - cache
+  - socket.io
+  - pubsub
+maintainers:
+  - name: Plaggona
+    email: panagiotis@skarvelis.gr
